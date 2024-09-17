@@ -16,7 +16,12 @@ function Main() {
       <button onClick={logout}>Logout</button>
       <h3>Search</h3>
       <Outlet />
-      <h3>Bottom</h3>
+      <h3>
+        <Link to="/main">Home</Link>...
+        <Link to="/main/friends">Friends</Link>
+        ...
+        <Link to="/main/requests">Requests</Link>...
+      </h3>
     </div>
   );
 }

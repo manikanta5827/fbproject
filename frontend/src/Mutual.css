@@ -1,0 +1,22 @@
+.container {
+  width: 50%;
+  margin: 20px auto;
+  border: 1px solid #ddd;
+  padding: 20px;
+  border-radius: 8px;
+}
+.friend-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd;
+}
+.friend-row:last-child {
+  border-bottom: none;
+}
+.name {
+  font-weight: bold;
+}
+.mutual-friends {
+  text-align: right;
+}

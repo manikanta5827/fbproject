@@ -12,6 +12,7 @@ import {
   Navigate,
 } from 'react-router-dom';
 import { useState } from 'react';
+import Notfound from './pages/Notfound';
 
 function getName() {
   const name = localStorage.getItem('name');
@@ -31,6 +32,7 @@ function App() {
           />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/*" element={<Notfound />} />
 
           <Route
             path="/main"

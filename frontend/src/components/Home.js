@@ -1,9 +1,12 @@
-import React from 'react'
-
+import MyFriends from './MyFriends';
+import Mutual from './Mutual';
 function Home() {
   return (
-    <div>Home</div>
-  )
+    <div>
+      <MyFriends />
+      <Mutual />
+    </div>
+  );
 }
 
-export default Home
+export default Home;

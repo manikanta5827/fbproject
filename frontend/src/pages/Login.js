@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 
 // Yup validation schema
 const schema = yup
@@ -84,6 +84,9 @@ function Login() {
           <input type="submit" value="Submit" />
         </form>
       </div>
+      <h2>
+        <Link to="/register">Registration page</Link>
+      </h2>
     </div>
   );
 }
