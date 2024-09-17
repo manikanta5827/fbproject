@@ -22,7 +22,19 @@ const schema2 = new mongoose.Schema({
   },
 });
 
+const schema3=new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  requests: {
+    type: [String],
+    default: [],
+  }
+})
+
 // Create the model only if it doesn't already exist
 const User = mongoose.model('User', schema, 'User');
 const FriendsList = mongoose.model('FriendsList', schema2, 'FriendsList');
-module.exports = { User, FriendsList }; // Export the User model
+const RequestsList = mongoose.model('RequestsList', schema3, 'RequestsList');
+module.exports = { User, FriendsList,RequestsList }; // Export the User model
