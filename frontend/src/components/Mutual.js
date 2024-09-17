@@ -4,11 +4,10 @@ import useSWR from 'swr';
 import SearchBar from './SearchBar'; // Reusable SearchBar component
 import '../Mutual.css';
 
-const fetcher = (url) =>
-  axios.get(url, { withCredentials: true }).then((response) => response.data);
+const fetcher = (url) => axios.get(url).then((response) => response.data);
 
 function Mutual() {
-  const userId = localStorage.getItem('user');
+  const [userId,setUserId]=useState(()=>localStorage.getItem('user'));
 
   const { data, error, mutate } = useSWR(
     `http://localhost:4000/api/getMutualFriends?name=${userId}`,
@@ -38,15 +37,13 @@ function Mutual() {
   }
 
   const handleRequest = async (name, type) => {
+    // console.log(name, type)
     try {
-      await axios.post(
-        'http://localhost:4000/api/friendRequest',
-        { withCredentials: true },
-        {
-          userId,
-          name,
-        }
-      );
+     
+      await axios.post('http://localhost:4000/api/friendRequest', {
+        userId,
+        name,
+      });
 
       if (type === 'friend') {
         const updatedFriends = { ...friendsState };
@@ -99,12 +96,8 @@ function Mutual() {
               <div className="name">{name}</div>
               <div className="mutual-friends">{friendsList.join(', ')}</div>
               <div>
-                <button onClick={() => handleRequest(name, 'friend')}>
-                  SEND
-                </button>
-                <button onClick={() => handleRemove(name, 'friend')}>
-                  Remove
-                </button>
+                <button onClick={() => handleRequest(name, 'friend')}>SEND</button>
+                <button onClick={() => handleRemove(name, 'friend')}>Remove</button>
               </div>
             </div>
           ))
@@ -120,12 +113,8 @@ function Mutual() {
             <div key={index} className="user-row">
               <div className="user-name">{user}</div>
               <div>
-                <button onClick={() => handleRequest(user, 'user')}>
-                  SEND
-                </button>
-                <button onClick={() => handleRemove(user, 'user')}>
-                  Remove
-                </button>
+                <button onClick={() => handleRequest(user, 'user')}>SEND</button>
+                <button onClick={() => handleRemove(user, 'user')}>Remove</button>
               </div>
             </div>
           ))

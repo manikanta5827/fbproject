@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import useSWR from 'swr';
-import SearchBar from './SearchBar';
 
 const fetcher = (url) =>
   axios
@@ -11,7 +10,7 @@ const fetcher = (url) =>
 
 function MyFriends() {
   const [friends, setFriends] = useState([]);
-  const userId = localStorage.getItem('user');
+  const [userId,setUserId]=useState(()=>localStorage.getItem('user'));
   const { data, error } = useSWR(
     `http://localhost:4000/api/getMyFriends?name=${userId}`,
     fetcher
@@ -42,11 +41,11 @@ function MyFriends() {
   return (
     <div>
       <h2>My Current friends</h2>
-      <SearchBar />
+
       {friends && friends.length > 0 ? (
-        friends.map((friend) => {
+        friends.map((friend,index) => {
           return (
-            <div>
+            <div key={index}>
               <p>{friend}</p>
               <button onClick={() => handleRemove(friend)}>
                 Remove Friend

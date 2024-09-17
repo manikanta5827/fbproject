@@ -3,10 +3,11 @@ import axios from 'axios';
 import useSWR from 'swr';
 import SearchBar from './SearchBar';  // Import the SearchBar component
 
-const fetcher = (url) => axios.get(url, { withCredentials: true }).then((response) => response.data);
+const fetcher = (url) => axios.get(url).then((response) => response.data);
 
 function Requests() {
-  const userId = localStorage.getItem('user');
+  const [userId,setUserId]=useState(()=>localStorage.getItem('user'));
+  
   const [requests, setRequests] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");  // Search term state
   const { data, error, mutate } = useSWR(
@@ -34,7 +35,7 @@ function Requests() {
 
   async function handleAccept(data) {
     try {
-      await axios.post('http://localhost:4000/api/acceptRequest', { withCredentials: true }, {
+      await axios.post('http://localhost:4000/api/acceptRequest',  {
         userId,
         name: data,
       });
@@ -47,7 +48,7 @@ function Requests() {
 
   async function handleDecline(data) {
     try {
-      await axios.post('http://localhost:4000/api/declineRequest', { withCredentials: true }, {
+      await axios.post('http://localhost:4000/api/declineRequest',  {
         userId,
         name: data,
       });
