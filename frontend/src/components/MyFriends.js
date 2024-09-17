@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import useSWR from 'swr';
+import SearchBar from './SearchBar';
 
 const fetcher = (url) =>
   axios
@@ -41,7 +42,7 @@ function MyFriends() {
   return (
     <div>
       <h2>My Current friends</h2>
-
+      <SearchBar />
       {friends && friends.length > 0 ? (
         friends.map((friend) => {
           return (

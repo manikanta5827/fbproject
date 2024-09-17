@@ -20,12 +20,13 @@ function getName() {
 }
 
 function App() {
-  const [Name, setName] = useState(getName); // Fetch name from localStorage
+  const [Name, setName] = useState(() => localStorage.getItem('user'));
 
   return (
     <Router>
       <div className="App">
         <Routes>
+          {/* Avoid constant redirects by controlling the Navigate calls */}
           <Route
             path="/"
             element={Name ? <Navigate to="/main" /> : <Navigate to="/login" />}

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import useSWR from 'swr';
+import SearchBar from './SearchBar'; // Reusable SearchBar component
 import '../Mutual.css';
 
-// Fetcher function to handle API requests
-const fetcher = (url) => axios.get(url).then((response) => response.data);
+const fetcher = (url) =>
+  axios.get(url, { withCredentials: true }).then((response) => response.data);
 
 function Mutual() {
   const userId = localStorage.getItem('user');
 
-  // useSWR to handle data fetching
   const { data, error, mutate } = useSWR(
     `http://localhost:4000/api/getMutualFriends?name=${userId}`,
     fetcher
@@ -17,8 +17,8 @@ function Mutual() {
 
   const [friendsState, setFriendsState] = useState({});
   const [usersState, setUsersState] = useState([]);
+  const [searchTerm, setSearchTerm] = useState(''); // Single search term for both sections
 
-  // Update state once data is fetched
   useEffect(() => {
     if (data) {
       setFriendsState(data.friends || {});
@@ -26,43 +26,51 @@ function Mutual() {
     }
   }, [data]);
 
-  // Function to handle removing an element
   function handleRemove(name, type) {
     if (type === 'friend') {
       const updatedFriends = { ...friendsState };
-      delete updatedFriends[name]; // Remove friend from state
+      delete updatedFriends[name];
       setFriendsState(updatedFriends);
     } else if (type === 'user') {
-      const updatedUsers = usersState.filter((user) => user !== name); // Remove user from state
+      const updatedUsers = usersState.filter((user) => user !== name);
       setUsersState(updatedUsers);
     }
   }
 
-  // Function to handle sending friend request to backend
   const handleRequest = async (name, type) => {
     try {
-      // Send backend request to remove friend or user
-      await axios.post('http://localhost:4000/api/friendRequest', {
-        userId,
-        name,
-      });
+      await axios.post(
+        'http://localhost:4000/api/friendRequest',
+        { withCredentials: true },
+        {
+          userId,
+          name,
+        }
+      );
 
-      // Update local state immediately to reflect removal in the frontend
       if (type === 'friend') {
         const updatedFriends = { ...friendsState };
-        delete updatedFriends[name]; // Remove friend from state
+        delete updatedFriends[name];
         setFriendsState(updatedFriends);
       } else if (type === 'user') {
-        const updatedUsers = usersState.filter((user) => user !== name); // Remove user from state
+        const updatedUsers = usersState.filter((user) => user !== name);
         setUsersState(updatedUsers);
       }
 
-      // Optionally refetch data to sync with backend
       mutate();
     } catch (err) {
       console.error('Error removing element:', err);
     }
   };
+
+  // Filter for both mutual friends and other users based on the single search term
+  const filteredFriends = Object.entries(friendsState).filter(([name]) =>
+    name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredUsers = usersState.filter((user) =>
+    user.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (error) {
     return <div>Error fetching users</div>;
@@ -74,15 +82,22 @@ function Mutual() {
 
   return (
     <div className="container">
-      <h2>Mutual Friends</h2>
+      <h2>Mutual Friends and Other Users</h2>
+      <SearchBar
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        placeholder="Search Mutual Friends or Other Users..."
+      />
+
       <div className="mutual-friends-section">
-        {Object.entries(friendsState).length === 0 ? (
+        <h3>Mutual Friends</h3>
+        {filteredFriends.length === 0 ? (
           <div>No mutual friends found.</div>
         ) : (
-          Object.entries(friendsState).map(([name, friendsList], index) => (
+          filteredFriends.map(([name, friendsList], index) => (
             <div key={index} className="friend-row">
               <div className="name">{name}</div>
-              <div className="mutual-friends">{friendsList.join(' , ')}</div>
+              <div className="mutual-friends">{friendsList.join(', ')}</div>
               <div>
                 <button onClick={() => handleRequest(name, 'friend')}>
                   SEND
@@ -96,12 +111,12 @@ function Mutual() {
         )}
       </div>
 
-      <h2>Other Users</h2>
       <div className="users-section">
-        {usersState.length === 0 ? (
+        <h3>Other Users</h3>
+        {filteredUsers.length === 0 ? (
           <div>No other users found.</div>
         ) : (
-          usersState.map((user, index) => (
+          filteredUsers.map((user, index) => (
             <div key={index} className="user-row">
               <div className="user-name">{user}</div>
               <div>

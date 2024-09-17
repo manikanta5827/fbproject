@@ -1,8 +1,12 @@
 const router = require('express').Router();
 const { connect } = require('../DB/mongo');
 const { User, FriendsList, RequestsList } = require('../DB/schema');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
+const saltRounds = 10;
 connect();
+require('dotenv').config();
 
 // Login route
 router.get('/', (req, res) => {
@@ -12,7 +16,7 @@ router.post('/login', async (req, res) => {
   const { name, password } = req.body;
   try {
     const user = await User.findOne({ name });
-    if (!user || user.password !== password) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).send({ error: 'Invalid credentials' });
     }
     return res.send({ name: user.name });
@@ -25,7 +29,8 @@ router.post('/login', async (req, res) => {
 router.post('/register', async (req, res) => {
   const { name, password } = req.body;
   try {
-    const user = new User({ name, password });
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const user = new User({ name, password: hashedPassword });
     await user.save();
 
     const friendsList = new FriendsList({ name });

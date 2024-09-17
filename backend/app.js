@@ -2,12 +2,17 @@ const express = require('express');
 const createError = require('http-errors');
 const morgan = require('morgan');
 require('dotenv').config();
-const cors=require('cors');
+const cors = require('cors');
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
-app.use(cors());
+app.use(
+  cors({
+    origin: 'http://localhost:3000', // Replace with your frontend URL
+    credentials: true, // Allow credentials (cookies) to be sent
+  })
+);
 app.get('/', async (req, res, next) => {
   res.send({ message: 'Awesome it works 🐻' });
 });
