@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from './axiosConfig.js';
 import useSWR from 'swr';
-import SearchBar from './SearchBar';  // Import the SearchBar component
+import SearchBar from './SearchBar';
+import '../styles/Requests.css';
+import AvatarCircle from './AvatarCircle.js';
 
 const fetcher = (url) => axios.get(url).then((response) => response.data);
 
 function Requests() {
-  const [userId,setUserId]=useState(()=>localStorage.getItem('user'));
-  
+  const [userId, setUserId] = useState(() => localStorage.getItem('user'));
   const [requests, setRequests] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");  // Search term state
-  const { data, error, mutate } = useSWR(
-    `http://localhost:4000/api/getAllRequests?name=${userId}`,
-    fetcher
-  );
+  const [searchTerm, setSearchTerm] = useState("");
+  const { data, error, mutate } = useSWR(`getAllRequests?name=${userId}`, fetcher);
 
   useEffect(() => {
     if (data) {
@@ -25,20 +23,9 @@ function Requests() {
     request.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (error) {
-    return <div>Error fetching users</div>;
-  }
-
-  if (!data) {
-    return <div>Loading...</div>;
-  }
-
   async function handleAccept(data) {
     try {
-      await axios.post('http://localhost:4000/api/acceptRequest',  {
-        userId,
-        name: data,
-      });
+      await axios.post('acceptRequest', { userId, name: data });
       updateFrontend(data);
       mutate();
     } catch (error) {
@@ -48,10 +35,7 @@ function Requests() {
 
   async function handleDecline(data) {
     try {
-      await axios.post('http://localhost:4000/api/declineRequest',  {
-        userId,
-        name: data,
-      });
+      await axios.post('declineRequest', { userId, name: data });
       updateFrontend();
       mutate();
     } catch (error) {
@@ -64,16 +48,24 @@ function Requests() {
     setRequests(updatedRequests);
   }
 
-  return (
-    <div>
-      <h2>Requests</h2>
-      <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+  if (error) {
+    return <div className="error-message">Error fetching users</div>;
+  }
 
+  if (!data) {
+    return <div className="loading-message">Loading...</div>;
+  }
+
+  return (
+    <div className="container">
+      <h2>Requests</h2>
+     {requests.length>0 ? <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />:<h3>No Requests...🤧</h3>}
       {filteredRequests.map((request, index) => (
-        <div key={index}>
+        <div className="request-item" key={index}>
+           <AvatarCircle name={request} />
           <p>{request}</p>
-          <button onClick={() => handleAccept(request)}>Accept</button>
-          <button onClick={() => handleDecline(request)}>Decline</button>
+          <button className="accept" onClick={() => handleAccept(request)}>Accept</button>
+          <button className="decline" onClick={() => handleDecline(request)}>Decline</button>
         </div>
       ))}
     </div>

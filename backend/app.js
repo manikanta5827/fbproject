@@ -5,6 +5,10 @@ require('dotenv').config();
 const cors = require('cors');
 const app = express();
 app.use(express.json());
+
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
+
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
 app.use(

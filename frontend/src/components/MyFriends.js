@@ -1,60 +1,63 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from './axiosConfig.js';
 import useSWR from 'swr';
+import SearchBar from './SearchBar';
+import AvatarCircle from './AvatarCircle';  // Import the new AvatarCircle component
 
-const fetcher = (url) =>
-  axios
-    .get(url)
-    .then((response) => response.data)
-    .then((data) => data.friends);
+const fetcher = (url) => axios.get(url).then((response) => response.data);
 
 function MyFriends() {
   const [friends, setFriends] = useState([]);
-  const [userId,setUserId]=useState(()=>localStorage.getItem('user'));
+  const [userId, setUserId] = useState(() => localStorage.getItem('user'));
+  const [searchTerm, setSearchTerm] = useState("");
+
   const { data, error } = useSWR(
-    `http://localhost:4000/api/getMyFriends?name=${userId}`,
+    `getMyFriends?name=${userId}`,
     fetcher
   );
+
   useEffect(() => {
-    setFriends(data);
+    if (data) {
+      setFriends(data.friends);
+    } else {
+      setFriends([]);
+    }
   }, [data]);
 
-  if (error) {
-    return <div>Error fetching users</div>;
-  }
-
-  if (!friends) {
-    return <div>Loading...</div>;
-  }
-  async function handleRemove(data) {
+  const handleRemove = async (friend) => {
     try {
-      await axios.post('http://localhost:4000/api/removeFriend', {
-        userId,
-        name: data,
-      });
-      setFriends(friends.filter((item) => item !== data));
+      await axios.post('removeFriend', { userId, name: friend });
+      setFriends(friends.filter((item) => item !== friend));
     } catch (error) {
       console.error('Error removing friend:', error);
     }
-  }
+  };
+
+  if (error) return <div>Error fetching friends</div>;
+  if (!friends) return <div>Loading...</div>;
+
+  const filteredFriends = friends.filter((friend) =>
+    friend.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div>
-      <h2>My Current friends</h2>
+    <div className="container">
+      <h2>My Current Friends</h2>
+      {friends.length > 0 && <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />}
 
-      {friends && friends.length > 0 ? (
-        friends.map((friend,index) => {
-          return (
-            <div key={index}>
-              <p>{friend}</p>
-              <button onClick={() => handleRemove(friend)}>
-                Remove Friend
-              </button>
-            </div>
-          );
-        })
+
+      {filteredFriends.length > 0 ? (
+        filteredFriends.map((friend, index) => (
+          <div className="row" key={index} style={{ display: 'flex', alignItems: 'center' }}>
+            <AvatarCircle name={friend} />
+            <p>{friend}</p>
+            <button className="decline" onClick={() => handleRemove(friend)}>
+              Remove Friend
+            </button>
+          </div>
+        ))
       ) : (
-        <p>You don't have any friends</p>
+        <h3>No friends...</h3>
       )}
     </div>
   );

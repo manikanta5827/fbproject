@@ -1,28 +1,29 @@
-import '../App.css';
-import { useForm } from 'react-hook-form';
-import * as yup from 'yup';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
-
-// Yup validation schema
-const schema = yup
-  .object()
-  .shape({
-    name: yup
-      .string()
-      .max(10, 'Name cannot exceed 10 characters')
-      .required('Name is required'),
-    password: yup
-      .string()
-      .min(4, 'Password must be at least 4 characters')
-      .max(12, 'Password cannot exceed 12 characters')
-      .required('Password is required'),
-  })
-  .required();
+// change initial initialisation of isAuthinicated variable from local storage to check if jwt exist or not if exist redirect to main directory[import '../App.css';
+  import { useForm } from 'react-hook-form';
+  import * as yup from 'yup';
+  import { yupResolver } from '@hookform/resolvers/yup';
+  import { useState } from 'react';
+  import { Navigate, Link } from 'react-router-dom';
+  import axios from 'axios';
+  // Yup validation schema
+  const schema = yup
+    .object()
+    .shape({
+      name: yup
+        .string()
+        .max(10, 'Name cannot exceed 10 characters')
+        .required('Name is required'),
+      password: yup
+        .string()
+        .min(4, 'Password must be at least 4 characters')
+        .max(12, 'Password cannot exceed 12 characters')
+        .required('Password is required'),
+    })
+    .required();
+  
   function Login() {
     const [isAuthenticated, setAuthenticated] = useState(() => {
-      return localStorage.getItem('user') !== null; // Avoid unnecessary re-renders
+      return localStorage.getItem('user') !== null;
     });
   
     const {
@@ -33,56 +34,59 @@ const schema = yup
       resolver: yupResolver(schema),
     });
   
-    async function handleLogin(data) {
-      try {
-        const response = await fetch('http://localhost:4000/api/login', {
-          method: 'POST',
+   
+  async function handleLogin(data) {
+    try {
+      const response = await axios.post(
+        'http://localhost:4000/api/login',
+        data,
+        {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(data),
-        });
-        const responseData = await response.json();
-  
-        if (responseData.error) {
-          alert('Invalid login credentials');
-        } else {
-          localStorage.setItem('user', responseData.name); // Store name
-          setAuthenticated(true); // Trigger authentication status change
+          withCredentials: true,  // This ensures cookies (credentials) are included in the request
         }
-      } catch (error) {
-        console.error('Login error:', error);
-        alert('Login failed, please try again.');
+      );
+  
+      const responseData = response.data;
+      console.log(responseData);
+      if (responseData.error) {
+        alert('Invalid login credentials');
+      } else {
+        // Store user information locally
+        localStorage.setItem('user', responseData.name);
+        setAuthenticated(true);
       }
+    } catch (error) {
+      // console.error('Login error:', error);
+      alert(error);
     }
+  }
+  
   
     if (isAuthenticated) {
-      return <Navigate to="/main" />; // Ensure this is only triggered when authenticated
+      return <Navigate to="/main" />;
     }
   
     return (
       <div className="App">
-        <h2>Login Account</h2>
-        <div className="subDiv">
+        <div className="container" style={{marginTop:'100px'}}>
+          <h2>Login Account</h2>
           <form onSubmit={handleSubmit(handleLogin)}>
             <label htmlFor="name">Name</label>
             <input type="text" placeholder="Name" {...register('name')} />
             {errors.name && <p>{errors.name.message}</p>}
-            <br />
-  
             <label htmlFor="password">Password</label>
             <input type="password" placeholder="Password" {...register('password')} />
             {errors.password && <p>{errors.password.message}</p>}
-            <br />
-  
             <input type="submit" value="Submit" />
           </form>
+          <h3>
+            <Link to="/register">Registration page</Link>
+          </h3>
         </div>
-        <h2>
-          <Link to="/register">Registration page</Link>
-        </h2>
       </div>
     );
   }
-
+  
   export default Login;

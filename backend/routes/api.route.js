@@ -1,177 +1,148 @@
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
 const { connect } = require('../DB/mongo');
-const { User, FriendsList, RequestsList } = require('../DB/schema');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const { authenticateToken } = require('../middleware/auth');
+const {
+  hashPassword,
+  comparePassword,
+  sendResponse,
+  handleError,
+  getFriendsList,
+  updateFriendship,
+  generateToken,
+} = require('../utils');
+const {
+  User,
+  FriendsList,
+  RequestsList,
+  PendingRequestsList,
+} = require('../DB/schema');
 
-const saltRounds = 10;
 connect();
-require('dotenv').config();
 
-// Login route
-router.get('/', (req, res) => {
-  res.send('API is available');
+// Health Check
+router.get('/', (req, res) => res.send('API is available'));
+
+router.get('/check-auth', authenticateToken, (req, res) => {
+  // If token is valid, return the user's information
+  res.status(200).json({ message: 'User is authenticated' });
 });
-const authenticateToken = (req, res, next) => {
-  //  console.log('ip: ',req.ip)
-  // const token = req.cookies.token;
-  // console.log('token : ' + token);
-  // if (!token) return res.status(403).send('Access denied.');
 
-  // jwt.verify(token, process.env.SECRET_KEY, (err, user) => {
-  //   if (err) return res.status(405).send('Invalid token.');
-  //   req.user = user;
-  next();
-  // });
-};
+// Login Route
 router.post('/login', async (req, res) => {
   const { name, password } = req.body;
 
   try {
-    const user = await User.findOne({ name });
-
-    // Check if user exists and compare passwords
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).send({ error: 'Invalid credentials' });
+    const userName = name.toLowerCase();
+    const user = await User.findOne({ name: userName });
+    if (!user || !(await comparePassword(password, user.password))) {
+      console.log('User not found');
+      return res.status(200).send({ error: 'Invalid credentials' });
     }
 
     // Create JWT token with user ID
-    // const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
-    //   expiresIn: '24h',
-    // });
-    // console.log(token);
+    const token = generateToken(user.name);
+    console.log(token);
     // Send token in cookie
-    // res.cookie('token', token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === 'production', // false for local development
-    //   sameSite: 'Strict', // Ensure the SameSite policy aligns with your use case
-    //   path: '/', // Ensure the cookie is available for all routes
-    // });
-
-    // Send response with user name
-    return res.send({ name: user.name });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // false for local development
+      sameSite: 'Strict', // Ensure the SameSite policy aligns with your use case
+      path: '/', // Ensure the cookie is available for all routes
+    });
+    sendResponse(res, 'Logged in successfully', { name: user.name });
   } catch (error) {
-    console.error('Error logging in:', error);
-    return res.status(500).send({ error: 'Server error' });
+    console.log(error);
+    handleError(res, error);
   }
 });
 
-// Register route
+// Register Route
 router.post('/register', async (req, res) => {
   const { name, password } = req.body;
+  console.log(req.body);
   try {
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-    const user = new User({ name, password: hashedPassword });
+    const userName = name.toLowerCase();
+    // console.log(userName);
+    const result = await User.findOne({ name: userName });
+    // console.log(result)
+    if (result) {
+      return res.status(409).send({ error: 'User already exists' });
+    }
+    const hashedPassword = await hashPassword(password);
+    const user = new User({ name: userName, password: hashedPassword });
     await user.save();
-    console.log(user);
 
-    const friendsList = new FriendsList({ name });
-    await friendsList.save();
+    await FriendsList.create({ name: userName });
+    await RequestsList.create({ name: userName });
+    await PendingRequestsList.create({ name: userName });
 
-    const requestsList = new RequestsList({ name });
-    await requestsList.save();
-
-    return res.send({ message: 'User registered successfully' });
+    sendResponse(res, 'User registered successfully');
   } catch (error) {
-    return res.status(501).send({ error: 'Failed to register user' });
+    handleError(res, error, 501);
   }
 });
+
+// Logout Route
 router.post('/logout', (req, res) => {
+  console.log('logged out');
   try {
     res.clearCookie('token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // true if in production
-      sameSite: 'Strict', // Ensure SameSite policy aligns with your use case
-      path: '/', // Ensure the cookie path matches the one used to set the cookie
+      path: '/',
     });
-    res.status(200).send({ message: 'Logged out successfully' });
+    sendResponse(res, 'Logged out successfully');
   } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).send({ error: 'Server error' });
+    handleError(res, error);
   }
 });
 
+// Get Friends
 router.get('/getMyFriends', authenticateToken, async (req, res) => {
   const { name } = req.query;
-  const friendsList = await FriendsList.find({ name }, { _id: 0, friends: 1 });
-  if (!friendsList.length) {
-    return res.status(404).send({ error: 'Friends list not found' });
+
+  try {
+    const friendsList = await getFriendsList(name);
+    if (!friendsList)
+      return res.status(404).send({ error: 'Friends list not found' });
+    console.log({ friends: friendsList.friends });
+    sendResponse(res, 'Friends fetched', { friends: friendsList.friends });
+  } catch (error) {
+    console.log(error);
+    handleError(res, error);
   }
-  console.log({ Myfriends: friendsList[0].friends });
-  return res.send({ friends: friendsList[0].friends });
 });
 
+// Get Mutual Friends
 router.get('/getMutualFriends', authenticateToken, async (req, res) => {
   const { name } = req.query;
-  //get his freinds friends list
-  let friendsList = await FriendsList.find({ name }, { _id: 0, friends: 1 });
 
-  friendsList = friendsList[0].friends || [];
-  friendsList.push(name);
-
-  const getMutualFriends = async (name) => {
-    const result = await FriendsList.aggregate([
-      // Step 1: Match the user by the passed name (e.g., 'King')
-      {
-        $match: { name: name },
-      },
-      // Step 2: Unwind the user's friends array
-      {
-        $unwind: '$friends',
-      },
-      // Step 3: Look up each friend's details (to get their friends)
-      {
-        $lookup: {
-          from: 'FriendsList', // Reference the same 'FriendsList' collection
-          localField: 'friends', // Direct friend's name
-          foreignField: 'name', // Match with the friend's document
-          as: 'friendDetails',
-        },
-      },
-      // Step 4: Unwind the friendDetails array to access each friend's document
-      {
-        $unwind: '$friendDetails',
-      },
-      // Step 5: Collect all sub-friends and their direct friend
-      {
-        $project: {
-          subFriend: '$friendDetails.friends', // Friends of friends (sub-friends)
-          directFriend: '$friends', // Direct friend of the input user
-        },
-      },
-      // Step 6: Unwind sub-friends to get each individual sub-friend
-      {
-        $unwind: '$subFriend',
-      },
-      // Step 7: Group by the sub-friends and collect the direct friends they are mutual with
-      {
-        $group: {
-          _id: '$subFriend', // Group by sub-friend
-          mutualFriends: { $addToSet: '$directFriend' }, // Collect all direct friends that share this sub-friend
-        },
-      },
-      // Step 8: Filter out the input user and their direct friends from the mutualFriends
+  try {
+    // Fetch user's friends list
+    const { friends: userFriends = [] } =
+      (await FriendsList.findOne({ name }, { _id: 0, friends: 1 })) || {};
+    userFriends.push(name); // Include the user themselves for the mutual friends search
+    // console.log('Me and Myfriends: ', userFriends);
+    // Aggregation to find mutual friends
+    const mutualFriends = await FriendsList.aggregate([
+      { $match: { name } },
+      { $unwind: '$friends' },
       {
         $lookup: {
           from: 'FriendsList',
-          pipeline: [
-            { $match: { name: name } },
-            { $project: { friends: 1, _id: 0 } },
-          ],
-          as: 'inputUserDetails',
+          localField: 'friends',
+          foreignField: 'name',
+          as: 'friendDetails',
         },
       },
+      { $unwind: '$friendDetails' },
+      { $unwind: '$friendDetails.friends' },
       {
-        $unwind: '$inputUserDetails',
-      },
-      {
-        $match: {
-          _id: {
-            $nin: ['$inputUserDetails.name', '$inputUserDetails.friends'],
-          }, // Exclude the input user and direct friends
+        $group: {
+          _id: '$friendDetails.friends',
+          mutualFriends: { $addToSet: '$friends' },
         },
       },
-      // Step 9: Convert the result into a key-value format
+      { $match: { _id: { $nin: userFriends } } }, // Exclude the user and direct friends
       {
         $project: {
           _id: 0,
@@ -182,198 +153,184 @@ router.get('/getMutualFriends', authenticateToken, async (req, res) => {
       {
         $group: {
           _id: null,
-          mutualFriendsMapping: {
-            $push: {
-              k: '$friendName', // Sub-friend's name
-              v: '$mutualFriends', // List of direct friends they are mutual with
-            },
-          },
+          result: { $push: { k: '$friendName', v: '$mutualFriends' } },
         },
       },
       {
         $project: {
           _id: 0,
-          result: { $arrayToObject: '$mutualFriendsMapping' },
+          result: { $arrayToObject: '$result' },
         },
       },
     ]);
 
-    return result.length ? result[0].result : {};
-  };
-
-  const friends = await getMutualFriends(name);
-  // console.log(friends);
-  let sample = [];
-  const filteredObject = Object.keys(friends).reduce((acc, key) => {
-    // console.log(key);
-    if (!friendsList.includes(key)) {
-      sample.push(key); // storing the names of friends not in the friendsList
-      acc[key] = friends[key];
-    }
-    return acc;
-  }, {});
-
-  // console.log(filteredObject);
-  let friend = [...friendsList, ...sample];
-  let users = await FriendsList.find(
-    { name: { $nin: friend } },
-    { _id: 0, friends: 0, __v: 0 }
-  );
-  users = users.map((user) => user.name);
-  // console.log(users);
-  const pendingUsers = await RequestsList.find(
-    { name },
-    { _id: 0, requests: 1 }
-  );
-
-  let newArray = pendingUsers[0].requests;
-
-  const filteredObj = Object.keys(filteredObject)
-    .filter((key) => !newArray.includes(key)) // Exclude keys that are in newArray
-    .reduce((acc, key) => {
-      acc[key] = filteredObject[key];
-      return acc;
-    }, {});
-
-  const filteredArray = users.filter((item) => {
-    return !newArray.includes(item);
-  });
-
-  console.log({ friends: filteredObj, users: filteredArray });
-  res.send({ friends: filteredObj, users: filteredArray });
-});
-
-router.post('/friendRequest', authenticateToken, async (req, res) => {
-  // console.log('hii')
-  try {
-    // console.log(req.body)
-    const { userId: sender, name: receiver } = req.body;
-    console.log(sender, receiver);
-
-    const response = await RequestsList.updateOne(
-      { name: receiver }, // Find the user by name (sender)
-      { $push: { requests: sender } } // Push the receiver into the 'requests' array
+    const friendsMapping = (mutualFriends[0] && mutualFriends[0].result) || {};
+    // console.log(mutualFriends, friendsMapping);
+    // Fetch all users excluding current friends and mutual friends
+    const allFriends = [...userFriends, ...Object.keys(friendsMapping)];
+    // console.log('All friends', allFriends);
+    const allUsers = await FriendsList.find(
+      { name: { $nin: allFriends } },
+      { _id: 0, friends: 0, __v: 0 }
     );
+    const userNames = allUsers.map((user) => user.name);
+    // console.log('Global Friends : ', userNames);
+    // Fetch pending requests
+    // console.log(name);
+    const pendingRequest = await PendingRequestsList.findOne(
+      { name },
+      { _id: 0, pendingRequests: 1 }
+    );
+    pendingRequests = pendingRequest.pendingRequests;
+    // console.log('pending requests : ', pendingRequests);
+    //find pending requests of you
+    const requestList = await RequestsList.findOne(
+      { name },
+      { _id: 0, requests: 1 }
+    );
+    pendingRequests = [...pendingRequests, ...requestList.requests];
+    // Filter out pending requests from mutual friends
+    const filteredMutualFriends = Object.keys(friendsMapping)
+      .filter((key) => !pendingRequests.includes(key))
+      .reduce((acc, key) => {
+        acc[key] = friendsMapping[key];
+        return acc;
+      }, {});
 
-    // console.log(response);
-    res.send({ success: 'success' });
+    // Filter out pending requests from user names
+    const filteredUserNames = userNames.filter(
+      (user) => !pendingRequests.includes(user)
+    );
+    res.send({
+      mutualFriends: filteredMutualFriends,
+      globalFriends: filteredUserNames,
+    });
   } catch (error) {
     console.error(error);
-    res.sendStatus(404);
+    res.status(500).send('Server error');
   }
+});
 
-  // try {
-  //   const senderList = await FriendsList.findOneAndUpdate(
-  //     { name: sender },
-  //     { $push: { friends: receiver } },
-  //     { new: true }
-  //   );
-  //   const receiverList = await FriendsList.findOneAndUpdate(
-  //     { name: receiver },
-  //     { $push: { friends: sender } },
-  //     { new: true }
-  //   );
-  //   return res.send({ message: 'Friend request sent successfully' });
-  // } catch (error) {
-  //   return res.status(500).send({ error: 'Failed to send friend request' });
-  // }
+// Friend Request
+router.post('/friendRequest', authenticateToken, async (req, res) => {
+  const { userId: sender, name: receiver } = req.body;
+
+  try {
+    console.log(sender, receiver);
+    await RequestsList.updateOne(
+      { name: receiver },
+      { $addToSet: { requests: sender } }
+    );
+
+    const response = await PendingRequestsList.updateOne(
+      { name: sender },
+      { $addToSet: { pendingRequests: receiver } }
+    );
+    console.log(response);
+    sendResponse(res, 'Friend request sent');
+  } catch (error) {
+    handleError(res, error);
+  }
 });
 
 router.get('/getAllRequests', authenticateToken, async (req, res) => {
   const { name } = req.query;
-  // console.log(name)
-  const requestsList = await RequestsList.find(
-    { name },
-    { _id: 0, requests: 1 }
-  );
-  // console.log(requestsList[0].requests);
-  res.send({ requests: requestsList[0].requests });
+  try {
+    const requestsList = await RequestsList.find(
+      { name },
+      { _id: 0, requests: 1 }
+    );
+    sendResponse(res, 'allRequests', { requests: requestsList[0].requests });
+  } catch (error) {
+    handleError(res, error);
+  }
 });
 
+router.get('/pendingRequests', authenticateToken, async (req, res) => {
+  const { name } = req.query;
+  try {
+    const requestsList = await PendingRequestsList.findOne(
+      { name },
+      { _id: 0, pendingRequests: 1 }
+    );
+    console.log(requestsList);
+    sendResponse(res, 'allRequests', {
+      pendingRequests: requestsList.pendingRequests,
+    });
+  } catch (error) {
+    console.log(error);
+    handleError(res, error);
+  }
+});
+
+// Accept Request
 router.post('/acceptRequest', authenticateToken, async (req, res) => {
   const { userId: sender, name: receiver } = req.body;
-  // console.log(sender, receiver);
+
   try {
-    const response = await RequestsList.updateOne(
-      { name: sender }, // Find the user by name (sender)
-      { $pull: { requests: receiver } } // Remove the receiver from the 'requests' array
+    await RequestsList.updateOne(
+      { name: sender },
+      { $pull: { requests: receiver } }
     );
+    await PendingRequestsList.updateOne(
+      { name: receiver },
+      { $pull: { pendingRequests: sender } }
+    );
+    await updateFriendship(sender, receiver, '$push');
 
-    // console.log(response);
-
-    const bulkOps = [
-      {
-        updateOne: {
-          filter: { name: sender },
-          update: { $push: { friends: receiver } },
-          returnDocument: 'after', // To get the updated document
-        },
-      },
-      {
-        updateOne: {
-          filter: { name: receiver },
-          update: { $push: { friends: sender } },
-          returnDocument: 'after', // To get the updated document
-        },
-      },
-    ];
-
-    const result = await FriendsList.bulkWrite(bulkOps);
-    // console.log(result);
-
-    return res.send({ message: 'Friend request accepted successfully' });
+    sendResponse(res, 'Friend request accepted');
   } catch (error) {
-    console.error(error);
-    res.sendStatus(404);
+    handleError(res, error);
   }
 });
 
+// Decline Request
 router.post('/declineRequest', authenticateToken, async (req, res) => {
   const { userId: sender, name: receiver } = req.body;
-  console.log(sender, receiver);
+
   try {
-    const response = await RequestsList.updateOne(
-      { name: sender }, // Find the user by name (sender)
-      { $pull: { requests: receiver } } // Remove the receiver from the 'requests' array
+    await RequestsList.updateOne(
+      { name: sender },
+      { $pull: { requests: receiver } }
     );
-
-    console.log(response);
-
-    return res.send({ message: 'Friend request rejected successfully' });
+    await PendingRequestsList.updateOne(
+      { name: receiver },
+      { $pull: { pendingRequests: sender } }
+    );
+    sendResponse(res, 'Friend request declined');
   } catch (error) {
-    console.error(error);
-    res.sendStatus(404);
+    handleError(res, error);
   }
 });
 
+//cancel request if pending
+router.post('/cancelRequest', authenticateToken, async (req, res) => {
+  const { userId: sender, name: receiver } = req.body;
+
+  try {
+    await PendingRequestsList.updateOne(
+      { name: sender },
+      { $pull: { pendingRequests: receiver } }
+    );
+    await RequestsList.updateOne(
+      { name: receiver },
+      { $pull: { requests: sender } }
+    );
+    sendResponse(res, 'Request canceled');
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+// Remove Friend
 router.post('/removeFriend', authenticateToken, async (req, res) => {
   const { userId: sender, name: receiver } = req.body;
-  console.log(sender, receiver);
+
   try {
-    const bulkOps = [
-      {
-        updateOne: {
-          filter: { name: sender },
-          update: { $pull: { friends: receiver } },
-          returnDocument: 'after', // To get the updated document
-        },
-      },
-      {
-        updateOne: {
-          filter: { name: receiver },
-          update: { $pull: { friends: sender } },
-          returnDocument: 'after', // To get the updated document
-        },
-      },
-    ];
-
-    const result = await FriendsList.bulkWrite(bulkOps);
-    console.log(result);
-
-    return res.send({ message: 'Friend removed successfully' });
+    await updateFriendship(sender, receiver, '$pull');
+    sendResponse(res, 'Friend removed successfully');
   } catch (error) {
-    console.error(error);
-    res.sendStatus(404);
+    handleError(res, error);
   }
 });
 

@@ -1,25 +1,9 @@
 import '../App.css';
 import { useForm } from 'react-hook-form';
-import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
-
-// Yup validation schema
-const schema = yup
-  .object()
-  .shape({
-    name: yup
-      .string()
-      .max(10, 'Name cannot exceed 10 characters')
-      .required('Name is required'),
-    password: yup
-      .string()
-      .min(4, 'Password must be at least 4 characters')
-      .max(12, 'Password cannot exceed 12 characters')
-      .required('Password is required'),
-  })
-  .required();
+import schema from '../components/validationSchema'; // Import the schema
 
 function Register() {
   const [isRegistered, setRegistered] = useState(false);
@@ -32,7 +16,6 @@ function Register() {
     resolver: yupResolver(schema),
   });
 
-  // Function to handle registration submission
   async function handleRegister(data) {
     try {
       const response = await fetch('http://localhost:4000/api/register', {
@@ -48,7 +31,7 @@ function Register() {
         alert('Registration failed');
       } else {
         alert('Registration successful');
-        setRegistered(true); // Set state for redirection after successful registration
+        setRegistered(true);
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -62,29 +45,35 @@ function Register() {
 
   return (
     <div className="App">
-      <h2>Register new account</h2>
-      <div className="subDiv">
+      <div className="container" style={{ marginTop: '100px' }}>
+        <h2>Register New Account</h2>
         <form onSubmit={handleSubmit(handleRegister)}>
           <label htmlFor="name">Name</label>
           <input type="text" placeholder="Name" {...register('name')} />
           {errors.name && <p>{errors.name.message}</p>}
-          <br />
 
-          <label htmlFor="password">Passwor</label>
+          <label htmlFor="password">Password</label>
           <input
             type="password"
             placeholder="Password"
             {...register('password')}
           />
           {errors.password && <p>{errors.password.message}</p>}
-          <br />
 
-          <input type="submit" value="submit" />
+          <label htmlFor="confirmPassword">Confirm Password</label>
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            {...register('confirmPassword')}
+          />
+          {errors.confirmPassword && <p>{errors.confirmPassword.message}</p>}
+
+          <input type="submit" value="Submit" />
         </form>
+        <h3>
+          <Link to="/login">Login page</Link>
+        </h3>
       </div>
-      <h3>
-        <Link to="/login">Login page</Link>
-      </h3>
     </div>
   );
 }

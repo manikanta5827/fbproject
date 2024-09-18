@@ -1,0 +1,55 @@
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.logout-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background-color: #d32f2f;
+}
+
+/*  */
+.navigation {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+.nav-link {
+  padding: 10px;
+  border-radius: 50%;
+  text-decoration: none;
+  color: #666;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.nav-link:hover {
+  background-color: #ddd;
+}
+
+.nav-link.active {
+  background-color: #3498db; /* Blue background for active button */
+  color: white; /* White text for active button */
+}
+
+.icon-button {
+  font-size: 24px;
+}
+
+.user-name {
+  font-size: 30px;
+  font-weight: bold;
+  background: linear-gradient(to right, #ff7e5f, #feb47b); /* gradient colors */
+  -webkit-background-clip: text; /* make the background clip to the text */
+  -webkit-text-fill-color: transparent; /* hide the default text color */
+}

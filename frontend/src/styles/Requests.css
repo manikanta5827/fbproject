@@ -1,0 +1,91 @@
+/* General container styling */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Header styling */
+h2 {
+  text-align: center;
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Search bar styling */
+.search-bar {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+}
+
+/* Request item container */
+.request-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Request name text */
+.request-item p {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+/* Button styling */
+button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+button.accept {
+  background-color: #4CAF50;
+  color: white;
+}
+
+button.accept:hover {
+  background-color: #45a049;
+}
+
+button.decline {
+  background-color: #f44336;
+  color: white;
+}
+
+button.decline:hover {
+  background-color: #d32f2f;
+}
+
+/* Error message styling */
+.error-message {
+  text-align: center;
+  color: #f44336;
+  font-size: 16px;
+}
+
+/* Loading message styling */
+.loading-message {
+  text-align: center;
+  font-size: 18px;
+  color: #888;
+}
+
+

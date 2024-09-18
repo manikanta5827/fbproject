@@ -2,8 +2,8 @@ import './App.css';
 import Main from './pages/Main';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Home from './components/Home';
-import Friends from './components/Friends';
+// import Home from './components/Home';
+// import Friends from './components/Friends';
 import Requests from './components/Requests';
 import {
   BrowserRouter as Router,
@@ -13,6 +13,8 @@ import {
 } from 'react-router-dom';
 import { useState } from 'react';
 import Notfound from './pages/Notfound';
+import MyFriends from './components/MyFriends';
+import Mutual from './components/MutualFriends';
 
 function getName() {
   const name = localStorage.getItem('name');
@@ -39,8 +41,8 @@ function App() {
             path="/main"
             element={Name ? <Main /> : <Navigate to="/login" />}
           >
-            <Route index element={<Home />} />
-            <Route path="friends" element={<Friends />} />
+            <Route index element={<MyFriends />} />
+            <Route path="friends" element={<Mutual />} />
             <Route path="requests" element={<Requests />} />
           </Route>
         </Routes>
