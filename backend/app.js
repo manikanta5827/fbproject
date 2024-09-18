@@ -11,12 +11,28 @@ app.use(cookieParser());
 
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://fbproject-manikantas-projects-05d5879c.vercel.app',
+];
+
 app.use(
   cors({
-    origin: 'http://localhost:3000', // Replace with your frontend URL
-    credentials: true, // Allow credentials (cookies) to be sent
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true, // Allow credentials (cookies, headers, etc.)
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
 app.get('/', async (req, res, next) => {
   res.send({ message: 'Awesome it works 🐻' });
 });

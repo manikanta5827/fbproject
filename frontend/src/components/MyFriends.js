@@ -2,19 +2,16 @@ import React, { useEffect, useState } from 'react';
 import axios from './axiosConfig.js';
 import useSWR from 'swr';
 import SearchBar from './SearchBar';
-import AvatarCircle from './AvatarCircle';  // Import the new AvatarCircle component
+import AvatarCircle from './AvatarCircle'; // Import the new AvatarCircle component
 
 const fetcher = (url) => axios.get(url).then((response) => response.data);
 
 function MyFriends() {
   const [friends, setFriends] = useState([]);
   const [userId, setUserId] = useState(() => localStorage.getItem('user'));
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const { data, error } = useSWR(
-    `getMyFriends?name=${userId}`,
-    fetcher
-  );
+  const { data, error } = useSWR(`getMyFriends?name=${userId}`, fetcher);
 
   useEffect(() => {
     if (data) {
@@ -33,7 +30,10 @@ function MyFriends() {
     }
   };
 
-  if (error) return <div>Error fetching friends</div>;
+  if (error) {
+    console.log(error);
+    return <div>Error fetching friend</div>;
+  }
   if (!friends) return <div>Loading...</div>;
 
   const filteredFriends = friends.filter((friend) =>
@@ -43,12 +43,17 @@ function MyFriends() {
   return (
     <div className="container">
       <h2>My Current Friends</h2>
-      {friends.length > 0 && <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />}
-
+      {friends.length > 0 && (
+        <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      )}
 
       {filteredFriends.length > 0 ? (
         filteredFriends.map((friend, index) => (
-          <div className="row" key={index} style={{ display: 'flex', alignItems: 'center' }}>
+          <div
+            className="row"
+            key={index}
+            style={{ display: 'flex', alignItems: 'center' }}
+          >
             <AvatarCircle name={friend} />
             <p>{friend}</p>
             <button className="decline" onClick={() => handleRemove(friend)}>

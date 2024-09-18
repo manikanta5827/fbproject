@@ -43,19 +43,19 @@ router.post('/login', async (req, res) => {
     // Create JWT token with user ID
     const token = generateToken(user.name);
     console.log(token);
-    // Send token in cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // false for local development
-      sameSite: 'Strict', // Ensure the SameSite policy aligns with your use case
-      path: '/', // Ensure the cookie is available for all routes
+
+    // Send token and user info in response
+    res.status(200).send({
+      message: 'Logged in successfully',
+      token: token,   // Send token in response body
+      name: user.name
     });
-    sendResponse(res, 'Logged in successfully', { name: user.name });
   } catch (error) {
     console.log(error);
     handleError(res, error);
   }
 });
+
 
 // Register Route
 router.post('/register', async (req, res) => {
@@ -99,7 +99,7 @@ router.post('/logout', (req, res) => {
 // Get Friends
 router.get('/getMyFriends', authenticateToken, async (req, res) => {
   const { name } = req.query;
-
+  console.log(name);
   try {
     const friendsList = await getFriendsList(name);
     if (!friendsList)
